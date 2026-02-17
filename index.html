@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Numération - Entrainement | Classe adaptative</title>
-    
-    <!-- Icône de l'application -->
-    <link rel="icon" type="image/png" href="./Boulier.png?v=3">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Inter:wght@400;600;700;900&display=swap');
@@ -17,20 +13,47 @@
             margin: 0;
             overflow-x: hidden;
             background-color: #f8fafc;
+            transition: background-image 0.8s ease-in-out;
         }
 
         .font-cursive { font-family: 'Dancing Script', cursive; }
+        
+        /* Animations Boulier */
         .bead-transition { transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Flip Card Logic */
         .perspective-1000 { perspective: 1000px; }
         .preserve-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
 
+        .card-container {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .timer-bar { transition: width 1s linear; }
+
+        .upper-bead { background-color: #b91c1c; }
+        .lower-bead { background-color: #334155; }
+        
+        .bead-glow {
+            position: absolute;
+            top: 2px;
+            left: 25%;
+            width: 50%;
+            height: 2px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 999px;
+            filter: blur(0.5px);
+        }
+
         .bg-fixed-custom {
             background-attachment: fixed;
             background-position: center;
             background-size: cover;
-            transition: background-image 1.2s ease-in-out;
         }
 
         @keyframes fade-in { 
@@ -38,27 +61,407 @@
             to { opacity: 1; transform: translateY(0); } 
         }
         .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
-        
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
     </style>
-
-    <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "@google/genai": "https://esm.sh/@google/genai@1.41.0",
+    "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
   }
 }
 </script>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-900 bg-fixed-custom" id="app-body">
-    <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
+
+    <div id="app" class="p-3 sm:p-5">
+        <!-- HEADER -->
+        <header class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center mb-10 gap-8 bg-white/95 p-6 sm:p-8 rounded-[2rem] shadow-2xl border border-white/50 backdrop-blur-md">
+            <div class="flex items-center gap-6 flex-1 justify-start w-full">
+                <div class="bg-slate-900 text-white p-4 rounded-[1.25rem] shadow-2xl ring-4 ring-slate-900/10">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-3xl font-black text-slate-800 uppercase tracking-tighter leading-none">Numération - Entrainement</h1>
+                    <p class="text-xs text-slate-500 font-black uppercase tracking-[0.4em] mt-2 opacity-80">Classe adaptative</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center gap-6 w-full lg:w-auto justify-end">
+                <div class="flex bg-slate-100 p-2 rounded-2xl border border-slate-200 w-full md:w-auto shadow-inner ring-1 ring-slate-900/5" id="multiplayer-controls">
+                    <button data-count="1" class="mode-btn flex-1 md:flex-none px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-xl ring-1 ring-slate-200 scale-105">Solo</button>
+                    <button data-count="2" class="mode-btn flex-1 md:flex-none px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800">Duel</button>
+                    <button data-count="4" class="mode-btn flex-1 md:flex-none px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800">Équipe</button>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <input type="text" id="ai-prompt" placeholder="Thème (ex: Jade, Cosmic...)" class="flex-1 md:w-56 px-5 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-purple-500/20 bg-white">
+                    <button id="apply-ai-style" class="bg-purple-600 text-white px-7 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-purple-700">Style IA</button>
+                </div>
+            </div>
+        </header>
+
+        <main id="zones-container" class="max-w-7xl mx-auto grid gap-8 grid-cols-1">
+            <!-- Zones générées par JS -->
+        </main>
+
+        <footer class="mt-20 text-center pb-12">
+            <p class="text-slate-400 text-[10px] font-black uppercase tracking-[0.7em] opacity-40">© 2025 • CLASSE ADAPTATIVE • PÉDAGOGIE NUMÉRIQUE</p>
+        </footer>
+    </div>
+
+    <script type="module">
+        import { GoogleGenAI } from "https://esm.sh/@google/genai@^1.41.0";
+
+        // --- MATH UTILS ---
+        const toRoman = (num) => {
+            if (num <= 0 || num > 3999) return 'N/A';
+            const lookup = [
+                { s: 'M', v: 1000 }, { s: 'CM', v: 900 }, { s: 'D', v: 500 }, { s: 'CD', v: 400 },
+                { s: 'C', v: 100 }, { s: 'XC', v: 90 }, { s: 'L', v: 50 }, { s: 'XL', v: 40 },
+                { s: 'X', v: 10 }, { s: 'IX', v: 9 }, { s: 'V', v: 5 }, { s: 'IV', v: 4 }, { s: 'I', v: 1 }
+            ];
+            let roman = '';
+            let tempNum = num;
+            for (const item of lookup) {
+                while (tempNum >= item.v) { roman += item.s; tempNum -= item.v; }
+            }
+            return roman;
+        };
+
+        const toFrenchWords = (n) => {
+            if (n === 0) return 'zéro';
+            const units = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
+            const teens = ['dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+            const tens = ['', 'dix', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
+
+            const getBelow100 = (val) => {
+                if (val < 10) return units[val];
+                if (val < 20) return teens[val - 10]; 
+                const q = Math.floor(val / 10);
+                const r = val % 10;
+                if (q === 7) return r === 1 ? 'soixante-et-onze' : `soixante-${teens[r]}`;
+                if (q === 8) return r === 0 ? 'quatre-vingts' : `quatre-vingt-${units[r]}`;
+                if (q === 9) return `quatre-vingt-${teens[r]}`;
+                const base = tens[q];
+                if (r === 0) return base;
+                if (r === 1) return `${base}-et-un`;
+                return `${base}-${units[r]}`;
+            };
+
+            const getBelow1000 = (val) => {
+                if (val < 100) return getBelow100(val);
+                const c = Math.floor(val / 100);
+                const r = val % 100;
+                if (c === 1) return r === 0 ? 'cent' : `cent-${getBelow100(r)}`;
+                const prefix = units[c];
+                if (r === 0) return `${prefix}-cents`;
+                return `${prefix}-cent-${getBelow100(r)}`;
+            };
+
+            const solve = (num) => {
+                if (num < 1000) return getBelow1000(num);
+                if (num < 1000000) {
+                    const mil = Math.floor(num / 1000);
+                    const rem = num % 1000;
+                    const milStr = mil === 1 ? 'mille' : `${getBelow1000(mil)}-mille`;
+                    return rem === 0 ? milStr : `${milStr}-${getBelow1000(rem)}`;
+                }
+                const mio = Math.floor(num / 1000000);
+                const rem = num % 1000000;
+                const mioLabel = mio > 1 ? 'millions' : 'million';
+                const mioStr = `${getBelow1000(mio)}-${mioLabel}`;
+                return rem === 0 ? mioStr : `${mioStr}-${solve(rem)}`;
+            };
+
+            return solve(n).replace(/\s+/g, '-').replace(/-+/g, '-');
+        };
+
+        const getDecomposition = (num) => {
+            const parts = [];
+            const expanded = [];
+            const s = num.toString();
+            for (let i = 0; i < s.length; i++) {
+                const digit = parseInt(s[i]);
+                if (digit === 0) continue;
+                const power = s.length - i - 1;
+                const multiplier = Math.pow(10, power);
+                parts.push((digit * multiplier).toLocaleString());
+                expanded.push(`(${digit} x ${multiplier.toLocaleString()})`);
+            }
+            return { sum: parts.join(' + ') || '0', expanded: expanded.join(' + ') || '0' };
+        };
+
+        // --- STATE ---
+        let zoneCount = 1;
+        let zonesData = [];
+        let timers = {};
+
+        const initZones = (count) => {
+            Object.values(timers).forEach(t => clearInterval(t));
+            timers = {};
+            zoneCount = count;
+            zonesData = Array.from({ length: count }, (_, i) => ({
+                id: i + 1,
+                columns: new Array(10).fill(0),
+                targetValue: 0,
+                isFlipped: false,
+                range: 1000,
+                mode: 'random',
+                timer: 5,
+                challengeType: 'arabic',
+                numQuestions: 10,
+                currentQuestion: 0,
+                isSessionActive: false,
+                opts: { arabic: true, roman: true, letters: true, additive: true, multiplicative: false }
+            }));
+            render();
+        };
+
+        const startTimer = (idx) => {
+            stopTimer(idx);
+            timers[idx] = setInterval(() => {
+                const z = zonesData[idx];
+                if (z.timer > 0 && !z.isFlipped) {
+                    z.timer--;
+                    updateTimerUI(idx);
+                } else if (z.timer === 0 && !z.isFlipped) {
+                    toggleFlip(idx);
+                }
+            }, 1000);
+        };
+
+        const stopTimer = (idx) => {
+            if (timers[idx]) { clearInterval(timers[idx]); delete timers[idx]; }
+        };
+
+        const updateTimerUI = (idx) => {
+            const z = zonesData[idx];
+            const bar = document.getElementById(`timer-bar-${idx}`);
+            const text = document.getElementById(`timer-text-${idx}`);
+            if (bar) bar.style.width = `${(z.timer / 5) * 100}%`;
+            if (text) text.innerText = `${z.timer}s`;
+        };
+
+        const generateChallenge = (idx) => {
+            const z = zonesData[idx];
+            
+            if (z.mode === 'dictation') {
+                if (!z.isSessionActive) {
+                    z.isSessionActive = true;
+                    z.currentQuestion = 1;
+                } else if (z.currentQuestion < z.numQuestions) {
+                    z.currentQuestion++;
+                } else {
+                    z.isSessionActive = false;
+                    z.currentQuestion = 0;
+                    alert(`Félicitations Joueur ${z.id} ! Séance terminée.`);
+                    stopTimer(idx);
+                    render();
+                    return;
+                }
+            }
+
+            const nV = Math.floor(Math.random() * (z.range - 1)) + 1;
+            const types = ['arabic', 'letters', 'decomposition'];
+            if (nV <= 3999) types.push('roman');
+            
+            z.challengeType = types[Math.floor(Math.random() * types.length)];
+            z.targetValue = nV;
+            z.isFlipped = false;
+            z.timer = 5;
+            
+            if (z.mode === 'dictation') {
+                z.columns = new Array(10).fill(0);
+                startTimer(idx);
+            } else {
+                const s = nV.toString().padStart(10, '0');
+                z.columns = s.split('').map(c => parseInt(c));
+                stopTimer(idx);
+            }
+            render();
+        };
+
+        const toggleFlip = (idx) => {
+            const z = zonesData[idx];
+            if (!z.isFlipped && z.mode !== 'random') {
+                let currentVal = 0;
+                z.columns.forEach((v, i) => {
+                    const p = z.columns.length - 1 - i;
+                    currentVal += (v % 10) * Math.pow(10, p);
+                });
+                z.targetValue = currentVal;
+            }
+            z.isFlipped = !z.isFlipped;
+            if (z.isFlipped) stopTimer(idx);
+            render();
+        };
+
+        const render = () => {
+            const container = document.getElementById('zones-container');
+            container.className = `max-w-7xl mx-auto grid gap-8 ${zoneCount === 1 ? 'grid-cols-1' : (zoneCount === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2')}`;
+            container.innerHTML = '';
+
+            zonesData.forEach((z, idx) => {
+                const zoneEl = document.createElement('div');
+                zoneEl.className = "bg-white/40 backdrop-blur-sm rounded-[2.5rem] border border-white/40 shadow-xl overflow-hidden animate-fade-in transition-all ring-1 ring-slate-900/5";
+                
+                let challengeLabel = "";
+                if (z.targetValue) {
+                    if (z.challengeType === 'roman') challengeLabel = toRoman(z.targetValue);
+                    else if (z.challengeType === 'letters') challengeLabel = toFrenchWords(z.targetValue);
+                    else if (z.challengeType === 'decomposition') challengeLabel = getDecomposition(z.targetValue).sum;
+                    else challengeLabel = z.targetValue.toLocaleString();
+                }
+
+                const activeCount = Object.values(z.opts).filter(Boolean).length;
+                const getRespSize = () => (zoneCount === 1 ? (activeCount <= 1 ? 'text-7xl sm:text-9xl' : 'text-5xl') : 'text-3xl');
+
+                zoneEl.innerHTML = `
+                <div class="w-full flex flex-col items-center gap-3 p-4">
+                    <div class="w-full flex flex-col gap-2 border-b border-slate-100 pb-3">
+                        <div class="flex justify-between items-center">
+                            <div class="flex gap-1">
+                                <span class="bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded">J${z.id}</span>
+                                ${['manual', 'random', 'dictation'].map(m => `
+                                    <button onclick="window.appActions.setMode(${idx}, '${m}')" class="text-[9px] font-black uppercase px-2 py-1 rounded border transition-all ${z.mode === m ? 'bg-blue-600 text-white border-blue-700 shadow-sm' : 'bg-white text-slate-500 border-slate-200'}">
+                                        ${m === 'manual' ? 'Libre' : m === 'random' ? 'Lecture' : 'Sprint'}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                ${z.mode === 'dictation' ? `
+                                    <select onchange="window.appActions.setNumQuestions(${idx}, this.value)" class="text-[9px] font-black border-slate-200 border rounded px-1 py-1 bg-white outline-none">
+                                        <option value="5" ${z.numQuestions == 5 ? 'selected' : ''}>5 Q</option>
+                                        <option value="10" ${z.numQuestions == 10 ? 'selected' : ''}>10 Q</option>
+                                        <option value="15" ${z.numQuestions == 15 ? 'selected' : ''}>15 Q</option>
+                                    </select>
+                                ` : ''}
+                                <button onclick="window.appActions.gen(${idx})" class="bg-slate-900 text-white px-3 py-1 rounded font-black text-[9px] uppercase shadow hover:bg-slate-800 active:scale-95 transition-transform">Générer</button>
+                            </div>
+                        </div>
+
+                        <div class="flex bg-slate-100 p-1 rounded-lg gap-1 border border-slate-200 shadow-inner">
+                            ${[1000, 10000, 1000000, 1000000000].map(v => `
+                                <button onclick="window.appActions.setRange(${idx}, ${v})" class="flex-1 text-[8px] font-black py-1 rounded transition-all ${z.range === v ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}">
+                                    ${v < 1000000 ? `< ${v.toLocaleString()}` : `< ${v/1000000}M`}
+                                </button>
+                            `).join('')}
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-center gap-1 bg-slate-50 p-1 rounded-xl border border-dashed border-slate-200">
+                            ${Object.keys(z.opts).map(k => `
+                                <button onclick="window.appActions.toggleOpt(${idx}, '${k}')" class="flex-1 px-1.5 py-1 rounded-md text-[8px] font-black transition-all ${z.opts[k] ? 'bg-emerald-600 text-white' : 'bg-white text-slate-300 shadow-sm'}">
+                                    ${k === 'arabic' ? '123' : k === 'roman' ? 'IVX' : k === 'letters' ? 'ABC' : k === 'additive' ? '+' : 'X'}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="w-full perspective-1000 h-[520px] sm:h-[600px]">
+                        <div class="card-container preserve-3d ${z.isFlipped ? 'rotate-y-180' : ''}">
+                            <!-- FACE BOULIER -->
+                            <div class="absolute inset-0 backface-hidden bg-white/80 backdrop-blur-xl rounded-3xl border p-4 flex flex-col items-center justify-between shadow-2xl overflow-hidden">
+                                ${z.mode === 'dictation' ? `
+                                    <div class="w-full flex flex-col items-center">
+                                        <div class="w-full flex justify-between items-center mb-1 px-1">
+                                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">DÉFI ${z.currentQuestion}/${z.numQuestions}</span>
+                                            <span id="timer-text-${idx}" class="text-xs font-black text-red-600 font-mono">${z.timer}s</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-slate-100 rounded-full mb-3 overflow-hidden shadow-inner">
+                                            <div id="timer-bar-${idx}" class="timer-bar h-full bg-blue-600" style="width: ${(z.timer/5)*100}%"></div>
+                                        </div>
+                                        <div class="w-full flex items-center justify-center min-h-[5rem] mb-2">
+                                            <p class="font-black text-slate-900 text-3xl text-center leading-tight">${challengeLabel}</p>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="flex-1 flex flex-col justify-center w-full">
+                                    <div class="w-full max-w-5xl bg-slate-100 p-2 sm:p-3 rounded-2xl border-[8px] sm:border-[12px] border-slate-900 shadow-2xl">
+                                        <div class="flex w-full bg-white rounded-md overflow-hidden border-2 border-slate-200">
+                                            ${z.columns.map((val, cIdx) => `
+                                                <div class="flex-1 min-w-[22px] flex flex-col items-center bg-slate-50 border-x border-slate-200 relative group">
+                                                    <div class="absolute w-0.5 h-full bg-slate-300 left-1/2 -translate-x-1/2 z-0"></div>
+                                                    <div class="flex flex-col gap-0.5 w-full pt-1 pb-6 px-0.5">
+                                                        <div onclick="window.appActions.hB(${idx}, ${cIdx}, 'u', 1)" class="bead-transition upper-bead w-full h-3 sm:h-4 md:h-5 rounded-full cursor-pointer shadow-md border border-black/10 relative z-10" style="transform: translateY(${Math.floor(val/5) > 1 ? '1.2rem' : '0'})"><div class="bead-glow"></div></div>
+                                                        <div onclick="window.appActions.hB(${idx}, ${cIdx}, 'u', 0)" class="bead-transition upper-bead w-full h-3 sm:h-4 md:h-5 rounded-full cursor-pointer shadow-md border border-black/10 relative z-10" style="transform: translateY(${Math.floor(val/5) > 0 ? '1.2rem' : '0'})"><div class="bead-glow"></div></div>
+                                                    </div>
+                                                    <div class="w-full h-2 bg-slate-800 shadow-md z-30 relative"></div>
+                                                    <div class="flex flex-col gap-0.5 w-full pb-1 pt-6 px-0.5 mt-auto">
+                                                        ${[0,1,2,3,4].map(i => `
+                                                            <div onclick="window.appActions.hB(${idx}, ${cIdx}, 'l', ${i})" class="bead-transition lower-bead w-full h-3 sm:h-4 md:h-5 rounded-full cursor-pointer shadow-md border border-black/10 relative z-10" style="transform: translateY(${val % 5 > i ? '-1.2rem' : '0'})"><div class="bead-glow"></div></div>
+                                                        `).join('')}
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                    <button onclick="window.appActions.reset(${idx})" class="mt-5 mx-auto block bg-slate-200 text-slate-600 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition-all active:scale-95">Réinitialiser</button>
+                                </div>
+
+                                <button onclick="window.appActions.flip(${idx})" class="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-xl hover:bg-emerald-700 active:scale-95 transition-all mt-4">Vérifier</button>
+                            </div>
+
+                            <!-- FACE CORRECTION -->
+                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 rounded-3xl p-5 flex flex-col gap-3 shadow-2xl border-2 border-slate-700">
+                                <h2 class="text-center text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] mb-2">Correction détaillée</h2>
+                                <div class="grid gap-3 flex-1 overflow-y-auto pr-1">
+                                    ${z.opts.arabic ? `<div class="bg-white p-4 rounded-3xl flex flex-col justify-center items-center"><span class="text-[9px] font-black text-slate-400 uppercase mb-1">Nombre</span><span class="${getRespSize()} font-black text-slate-900">${z.targetValue.toLocaleString()}</span></div>` : ''}
+                                    ${z.opts.letters ? `<div class="bg-white p-4 rounded-3xl flex flex-col justify-center items-center"><span class="text-[9px] font-black text-slate-400 uppercase mb-1">Lettres</span><span class="text-3xl font-cursive text-blue-700 italic text-center px-4 leading-tight">${toFrenchWords(z.targetValue)}</span></div>` : ''}
+                                    ${z.opts.roman ? `<div class="bg-white p-4 rounded-3xl flex flex-col justify-center items-center"><span class="text-[9px] font-black text-slate-400 uppercase mb-1">Romains</span><span class="text-5xl font-serif font-bold text-amber-900">${toRoman(z.targetValue)}</span></div>` : ''}
+                                    ${z.opts.additive ? `<div class="bg-white p-4 rounded-3xl flex flex-col justify-center items-center"><span class="text-[9px] font-black text-slate-400 uppercase mb-1">Décomposition</span><span class="text-2xl text-slate-900 font-bold text-center px-2">${getDecomposition(z.targetValue).sum}</span></div>` : ''}
+                                </div>
+                                <button onclick="window.appActions.flip(${idx})" class="w-full bg-white text-slate-900 py-4 rounded-2xl font-black uppercase text-[11px] hover:bg-slate-100 mt-2 shadow-lg active:scale-95">Retour au jeu</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                container.appendChild(zoneEl);
+            });
+        };
+
+        window.appActions = {
+            setMode: (idx, m) => { const z = zonesData[idx]; z.mode = m; z.isSessionActive = false; z.currentQuestion = 0; generateChallenge(idx); },
+            gen: (idx) => generateChallenge(idx),
+            setRange: (idx, r) => { zonesData[idx].range = r; generateChallenge(idx); },
+            setNumQuestions: (idx, n) => { zonesData[idx].numQuestions = parseInt(n); },
+            toggleOpt: (idx, k) => { zonesData[idx].opts[k] = !zonesData[idx].opts[k]; render(); },
+            flip: (idx) => toggleFlip(idx),
+            reset: (idx) => { zonesData[idx].columns = new Array(10).fill(0); render(); },
+            hB: (idx, cIdx, type, i) => {
+                const z = zonesData[idx]; let val = z.columns[cIdx];
+                if (type === 'u') { val = (Math.floor(val/5) > i) ? val - 5 : val + 5; }
+                else { const aL = val % 5; val = val - aL + (aL > i ? i : (i + 1)); }
+                z.columns[cIdx] = Math.min(15, Math.max(0, val)); render();
+            }
+        };
+
+        document.getElementById('apply-ai-style').addEventListener('click', async () => {
+            const p = document.getElementById('ai-prompt').value; if (!p) return;
+            const b = document.getElementById('apply-ai-style'); b.innerText = "IA..."; b.disabled = true;
+            try {
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const res = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts: [{ text: `A soft educational background. Style: ${p}.` }] },
+                    config: { imageConfig: { aspectRatio: "16:9" } }
+                });
+                for (const part of res.candidates?.[0]?.content?.parts || []) {
+                    if (part.inlineData) document.getElementById('app-body').style.backgroundImage = `url(data:image/png;base64,${part.inlineData.data})`;
+                }
+            } catch (e) { alert("Erreur IA"); } finally { b.innerText = "Style IA"; b.disabled = false; }
+        });
+
+        document.getElementById('multiplayer-controls').addEventListener('click', (e) => {
+            const b = e.target.closest('button'); if (!b) return;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.className = "mode-btn flex-1 md:flex-none px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all text-slate-500 hover:text-slate-800");
+            b.className = "mode-btn flex-1 md:flex-none px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all bg-white text-blue-600 shadow-xl ring-1 ring-slate-200 scale-105";
+            initZones(parseInt(b.dataset.count));
+        });
+
+        initZones(1);
+    </script>
 </body>
 </html>
